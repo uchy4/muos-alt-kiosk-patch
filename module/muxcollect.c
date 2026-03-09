@@ -602,6 +602,11 @@ static void handle_b(void) {
         return;
     }
 
+    if (kiosk.FULL_KIOSK && at_base(sys_dir, access_mode)) {
+        play_sound(SND_ERROR);
+        return;
+    }
+
     play_sound(SND_BACK);
 
     if (at_base(sys_dir, access_mode)) {
@@ -635,6 +640,7 @@ static void handle_x(void) {
         return;
     }
 
+    if (kiosk.FULL_KIOSK) return;
     if (msgbox_active || !ui_count || add_mode || is_ksk(kiosk.COLLECT.REMOVE)) return;
 
     if (!hold_call) {
@@ -693,6 +699,7 @@ static void handle_y(void) {
         return;
     }
 
+    if (kiosk.FULL_KIOSK) return;
     if (msgbox_active || hold_call) return;
 
     if (!is_ksk(kiosk.COLLECT.NEW_DIR) && at_base(sys_dir, access_mode)) {
@@ -843,6 +850,22 @@ static void on_key_event(struct input_event ev) {
     }
 }
 
+static void toggle_full_kiosk(void) {
+    if (msgbox_active || hold_call) return;
+
+    if (kiosk.FULL_KIOSK) {
+        write_text_to_file(CONF_KIOSK_PATH "full_kiosk", "w", INT, 0);
+        sync();
+        kiosk.FULL_KIOSK = 0;
+
+        load_mux("launcher");
+        write_text_to_file(MUOS_PDI_LOAD, "w", CHAR, "collection");
+
+        close_input();
+        mux_input_stop();
+    }
+}
+
 int muxcollect_main(int add, char *dir, int last_index) {
     exit_status = 0;
     add_mode = add;
@@ -974,6 +997,32 @@ int muxcollect_main(int add, char *dir, int last_index) {
         lv_obj_add_flag(ui_lblNavY, MU_OBJ_FLAG_HIDE_FLOAT);
     }
 
+    if (kiosk.FULL_KIOSK) {
+        lv_obj_add_flag(ui_lblTitle, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_lblNavBGlyph, MU_OBJ_FLAG_HIDE_FLOAT);
+        lv_obj_add_flag(ui_lblNavB, MU_OBJ_FLAG_HIDE_FLOAT);
+        lv_obj_add_flag(ui_lblNavXGlyph, MU_OBJ_FLAG_HIDE_FLOAT);
+        lv_obj_add_flag(ui_lblNavX, MU_OBJ_FLAG_HIDE_FLOAT);
+        lv_obj_add_flag(ui_lblNavYGlyph, MU_OBJ_FLAG_HIDE_FLOAT);
+        lv_obj_add_flag(ui_lblNavY, MU_OBJ_FLAG_HIDE_FLOAT);
+
+        /* Hide item icons/glyphs in the list */
+        uint32_t panel_count = lv_obj_get_child_cnt(ui_pnlContent);
+        for (uint32_t i = 0; i < panel_count; i++) {
+            lv_obj_t *panel = lv_obj_get_child(ui_pnlContent, i);
+            /* Each panel has: label (child 0), glyph image (child 1) */
+            if (lv_obj_get_child_cnt(panel) > 1) {
+                lv_obj_add_flag(lv_obj_get_child(panel, 1), LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+
+        /* Hide LVGL perf/mem monitor overlays on sys layer */
+        uint32_t child_count = lv_obj_get_child_cnt(lv_layer_sys());
+        for (uint32_t i = 0; i < child_count; i++) {
+            lv_obj_add_flag(lv_obj_get_child(lv_layer_sys(), i), LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
     update_file_counter(ui_lblCounter_collect, file_count);
     init_osk(ui_pnlEntry_collect, ui_txtEntry_collect, false);
 
@@ -1009,7 +1058,15 @@ int muxcollect_main(int add, char *dir, int last_index) {
                     [MUX_INPUT_L2] = hold_call_set,
                     [MUX_INPUT_R1] = handle_r1,
                     [MUX_INPUT_R2] = handle_random_select,
-            }
+            },
+            .combo = {
+                    {
+                            .type_mask = BIT(MUX_INPUT_L1) | BIT(MUX_INPUT_R2) | BIT(MUX_INPUT_Y),
+                            .press_handler = toggle_full_kiosk,
+                            .hold_handler = toggle_full_kiosk,
+                    },
+            },
+            .combo_count = 1
     };
 
     list_nav_set_callbacks(list_nav_prev, list_nav_next);

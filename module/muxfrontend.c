@@ -433,6 +433,8 @@ static void module_rtc(void) {
 static void module_start(void) {
     if (config.BOOT.FACTORY_RESET) {
         exec_mux("installer", "muxinstall", muxinstall_main);
+    } else if (kiosk.FULL_KIOSK) {
+        module_collection();
     } else {
         exec_mux("launcher", "muxlaunch", muxlaunch_main);
     }
@@ -530,6 +532,13 @@ static int module_dispatch(void) {
 
     remove(MUOS_ACT_LOAD);
 
+    /* In full kiosk mode, redirect launcher dispatches to collection */
+    if (kiosk.FULL_KIOSK && strcmp(action, "launcher") == 0) {
+        screen_clean = 0;
+        module_collection();
+        return 1;
+    }
+
     for (size_t i = 0; modules[i].action; ++i) {
         if (strcmp(action, modules[i].action) == 0) {
             screen_clean = 0;
@@ -549,6 +558,7 @@ static int module_dispatch(void) {
 
 static void reset_alert(void) {
     if (config.BOOT.FACTORY_RESET) return;
+    if (kiosk.FULL_KIOSK) return;
 
     int show_alert = 0;
     if (!file_exist(DONE_RESET) && read_line_int_from(USED_RESET, 1)) show_alert = 1;

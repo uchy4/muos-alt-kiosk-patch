@@ -7,6 +7,7 @@ extern struct mux_kiosk kiosk;
 struct mux_kiosk {
     int16_t ENABLE;
     int16_t MESSAGE;
+    int16_t FULL_KIOSK;
 
     struct {
         int16_t ARCHIVE;

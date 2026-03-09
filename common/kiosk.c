@@ -7,6 +7,7 @@ void load_kiosk(struct mux_kiosk *kiosk) {
 
     CFG_INT_FIELD(kiosk->ENABLE, CONF_KIOSK_PATH "enable", 0);
     CFG_INT_FIELD(kiosk->MESSAGE, CONF_KIOSK_PATH "message", 0);
+    CFG_INT_FIELD(kiosk->FULL_KIOSK, CONF_KIOSK_PATH "full_kiosk", 0);
 
     CFG_INT_FIELD(kiosk->APPLICATION.ARCHIVE, CONF_KIOSK_PATH "application/archive", 0);
     CFG_INT_FIELD(kiosk->APPLICATION.TASK, CONF_KIOSK_PATH "application/task", 0);

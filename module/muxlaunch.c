@@ -407,12 +407,18 @@ static void handle_right_hold(void) {
 static void launch_kiosk(void) {
     if (msgbox_active || hold_call) return;
 
-    if (current_item_index == 5) { /* config */
+    if (current_item_index == 5) { /* config - open kiosk settings */
         load_mux("kiosk");
-
-        close_input();
-        mux_input_stop();
+    } else {
+        /* activate full kiosk mode */
+        write_text_to_file(CONF_KIOSK_PATH "full_kiosk", "w", INT, 1);
+        sync();
+        kiosk.FULL_KIOSK = 1;
+        load_mux("collection");
     }
+
+    close_input();
+    mux_input_stop();
 }
 
 static void init_elements(void) {
